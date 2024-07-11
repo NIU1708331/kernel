@@ -1,3 +1,4 @@
+Necesitas instalar QEMU.
 En la carpeta del proyecto:
 ```sh
 cargo install bootimage
