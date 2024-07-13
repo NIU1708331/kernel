@@ -5,6 +5,10 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
+pub mod allocator;
+pub mod memory;
 pub mod gdt;
 pub mod interrupts;
 pub mod serial;
@@ -35,20 +39,25 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     exit_qemu(QemuExitCode::Success);
 }
 
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
     init();
     test_main();
-    loop {}
+    hlt_loop();
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
 }
 
 #[cfg(test)]
@@ -81,10 +90,18 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() }; 
+    x86_64::instructions::interrupts::enable();
 }
 
 
 #[test_case]
 fn test_breakpoint_exception() {
     x86_64::instructions::interrupts::int3();
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
