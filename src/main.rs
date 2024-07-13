@@ -10,7 +10,7 @@ use core::panic::PanicInfo;
 use kernel::println;
 use bootloader::{BootInfo, entry_point};
 
-use alloc::{boxed::Box, vec, string, vec::Vec, rc::Rc};
+// use alloc::{boxed::Box, vec, string, vec::Vec, rc::Rc};
 use kernel::task::{keyboard, Task, executor::Executor}; 
 
 entry_point!(kernel_main);
@@ -18,9 +18,6 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use kernel::allocator;
     use x86_64::VirtAddr;
-    use x86_64::structures::paging::{
-        Translate
-    };
     use kernel::memory;
     use kernel::memory::BootInfoFrameAllocator;
 
@@ -36,17 +33,28 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     allocator::init_heap(&mut mapper, &mut frame_allocator)
         .expect("heap initialization falied");
 
+    use kernel::vga_video::FRAMEBUFFER;
 
-    let mut executor = Executor::new();
-    executor.spawn(Task::new(example_task()));
-    executor.spawn(Task::new(keyboard::print_keypresses()));
-    executor.run();
+    {
+        let mut fb = FRAMEBUFFER.lock();
+        for y in 0..340 {
+            for x in 0..200 {
+                fb[x][y].write(((x + y) % 255) as u8);
+            }
+        }
+
+    } // Release the lock
 
     #[cfg(test)]
     test_main();
 
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+
     println!("Kernel didn't crash");
-    kernel::hlt_loop();
+    executor.run();
+    // kernel::hlt_loop();
 }
 
 #[cfg(not(test))]

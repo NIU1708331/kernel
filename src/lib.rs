@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+pub mod vga_video;
 pub mod task;
 pub mod allocator;
 pub mod memory;

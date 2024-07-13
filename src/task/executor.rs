@@ -66,7 +66,7 @@ impl Executor {
         if self.task_queue.is_empty() {
             enable_and_hlt();
         } else {
-            interrupts::enable;
+            interrupts::enable();
         }
     }
 }
